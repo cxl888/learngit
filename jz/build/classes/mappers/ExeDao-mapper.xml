@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sj.exe.dao.ExeDao">
+	<!-- stu begin -->
+  <select id="selectStu" resultType="com.sj.exe.vo.Student">
+  	select * from student;
+  </select>
+  <select id="queryStudentAll" parameterType="java.util.Map" resultType="map">
+  	select * from student
+        
+        limit #{start},#{max};
+  </select>
+  <select id="queryStudentCount" parameterType="com.sj.exe.vo.Student" resultType="int">
+  	select count(*) from  student 
+        
+  </select>
+	<select id="queryAllStudent" parameterType="com.sj.exe.vo.Student"
+		resultType="com.sj.exe.vo.Student">
+		select 
+			stu.stuId ,
+			stu.stuName,
+			stu.Classid,
+			stu.eStatus,
+			stu.Teacherid,
+			stu.ExeCompany exeCompany,
+			stu.Note,
+			stu.phone,
+			stu.Email,
+			(select count(*) from Journal j where j.stuId = stu.stuId )weekCount,
+			stu.qq
+		from Student stu
+		<where>
+			<if test="teacherId!=null" >
+				and teacherId =#{teacherId}
+			</if>
+		</where>
+		<if test="pageflag!=null" >
+				
+		</if>
+		</select>
+		<select id="queryStuCount" parameterType="com.sj.exe.vo.Student"
+		resultType="int">
+		select 
+			count(*)
+		from Student 
+		<where>
+			<if test="teacherId!=null" >
+				and teacherId =#{teacherId}
+			</if>
+		</where>
+		</select>
+		<select id="queryStudentById" parameterType="com.sj.exe.vo.Student"
+		resultType="com.sj.exe.vo.Student">
+		select 
+			stu.stuId ,
+			stu.stuName,
+			stu.Classid,
+			stu.eStatus,
+			stu.Teacherid,
+			stu.ExeCompany exeCompany,
+			stu.Note,
+			stu.phone,
+			stu.Email,
+			stu.qq
+		from Student stu
+		where stu.stuId = #{stuId} 
+		
+		</select>
+		
+		<update id="updateStudent" parameterType="com.sj.exe.vo.Student">
+			update student set qq =#{qq} ,
+			email =#{email},
+			phone =#{phone}
+			<if test="eStatus!=null">
+			, eStatus =#{eStatus}
+			</if>
+			where stuId =#{stuId} 
+		</update>
+		<update id="updateStatue" parameterType="com.sj.exe.vo.Student">
+			update student set eStatus=#{eStatus} 
+			where stuId =#{stuId} 
+		</update>
+		<!-- stu end -->
+		
+		<!-- 任务 begin-->
+		<select id="queryTaskAll" parameterType="com.sj.exe.vo.TrainTask"
+			resultType="com.sj.exe.vo.TrainTask">
+			t.Trainid,
+			t.title,
+			t.Content,
+			t.TStep,
+			t.status,
+			t.TeaId,
+			t.stuId
+			from TrainTask t
+			<where>
+				<if test="teaId!=null">
+					and teaId =#{teaId}
+				</if>
+				<if test="stuId!=null">
+					and stuId =#stuId}
+				</if>
+				<if test="Trainid!=null">
+					and Trainid =#{Trainid}
+				</if>
+			</where>
+			<if test="pageflag!=null">
+				limit #{limit},#{offset}
+			</if>
+		</select>
+		<select id="queryTask" parameterType="com.sj.exe.vo.TrainTask"
+			resultType="com.sj.exe.vo.TrainTask">
+			select 
+			t.Trainid,
+			t.title,
+			t.Content,
+			t.TStep,
+			t.status,
+			t.TeaId,
+			t.stuId
+			from TrainTask t
+			<where>
+					and stuId =#{stuId}
+			</where>
+		</select>
+		
+		<insert id="addTask" parameterType="com.sj.exe.vo.TrainTask" >
+		insert into traintask
+		values(#{trainId},#{title},#{content},#{tStep},#{status},#{teaId},#{stuId})
+		</insert>
+		
+		<update id="updateTask" parameterType="com.sj.exe.vo.TrainTask">
+			update traintask set   content =#{content},
+			tStep =#{tStep},
+			title =#{title}
+			where stuId =#{stuId} 
+		</update>
+		<!-- 任务 end-->
+		
+		<!-- 用户user begin-->
+		
+		<select id="queryUser" parameterType="com.sj.exe.vo.User"
+			resultType="com.sj.exe.vo.User">
+			select 
+				u.userId,
+				u.userName,
+				u.Password,
+				u.role,
+				u.Status
+				from user u
+			<where>
+				userId =#{userId}
+				and Password =#{passWord}
+				and role =#{role}
+			</where>
+		</select>
+		
+		<insert id="addUser" parameterType="com.sj.exe.vo.User">
+		insert into TrainTask
+		values(#{userId},#{userName},#{Password},#{role},#{Status})
+		</insert>
+		<!-- 添加学生 -->
+		<insert id="addStu" parameterType="com.sj.exe.vo.Student">
+		insert into Student
+		values(#{stuId},#{stuName},#{classid},#{eStatus},#{Teacherid},#{ExeCompany},#{Note},#{phone},#{Email},#{qq})
+		</insert>
+		
+		<!-- 用户user end-->
+		
+		<!-- 周记Journal begin-->
+		<insert id="addJournal" parameterType="com.sj.exe.vo.Journal">
+		insert into Journal
+		values(#{stuId},#{jId},#{week},#{status},#{createDate},#{content},#{supportAdvice},#{nextWork},#{teaDeal})
+		</insert>
+		<sql id="queryJournal_condition">
+			<where>
+				userId =#{userId}
+				and Password =#{Password}
+				and role =#{role}
+			</where>
+		
+		</sql>
+		<select id="queryJournalAll" parameterType="com.sj.exe.vo.Journal"
+			resultType="com.sj.exe.vo.Journal">
+
+			select 
+				j.stuId ,
+				j.jId,
+				j.week,
+				j.status,
+				j.CreateDate,
+				j.workContent Content ,
+				j.SupportAdvice,
+				j.NextWork,
+				j.TeaDeal
+				from Journal j
+			<where>
+			<if test="stuId!=null" >
+				and stuId =#{stuId}
+			</if>
+			<if test="week!=null" >
+				and week =#{week}
+			</if>
+		</where>
+		
+		
+		</select>
+		
+		<select id="queryJournal" parameterType="com.sj.exe.vo.Journal"
+			resultType="com.sj.exe.vo.Journal">
+			select 
+				j.stuId ,
+				j.jId,
+				j.week,
+				j.status,
+				j.CreateDate,
+				j.workContent content,
+				j.SupportAdvice,
+				j.NextWork,
+				j.TeaDeal
+				from  Journal j
+				where 
+				 stuId =#{stuId}
+				and week =#{week}
+		</select>
+		
+		<update id="updateJournal" parameterType="com.sj.exe.vo.Journal">
+			update Journal set workContent  =#{content} 
+			,
+			SupportAdvice =#{supportAdvice} ,
+			NextWork =#{nextWork} ,
+			TeaDeal =#{teaDeal} 
+			
+			where stuId =#{stuId} 
+				and week =#{week} 
+		</update>
+		<!-- 周记Journal end-->
+</mapper>
+
