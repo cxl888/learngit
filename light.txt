@@ -1,0 +1,137 @@
+#include <hal_lcd.h>
+#include <hal_led.h>
+#include <hal_joystick.h>
+#include <hal_assert.h>
+#include <hal_board.h>
+#include <hal_int.h>
+#include "hal_mcu.h"
+#include "hal_button.h"
+#include "hal_rf.h"
+#include "util_lcd.h"
+#include "basic_rf.h"
+
+#define RF_CHANNEL                25      // 2.4 GHz 无线通讯信道
+#define PAN_ID                0x2007      //指定网络标志符
+#define SWITCH_ADDR           0x2520      //指定switch设备的网络地址
+#define LIGHT_ADDR            0xBEEF      //指定light设备的网络地址
+#define APP_PAYLOAD_LENGTH        1       //发送数据长度
+#define LIGHT_TOGGLE_CMD          0       //发送命令
+
+#define SWITCH                    1      //定义SWITCH角色为1
+#define LIGHT                     2      //定义LIGHT角色为2
+
+//本文件数组声明
+static uint8 pTxData[APP_PAYLOAD_LENGTH];  //发送数据数组串
+static uint8 pRxData[APP_PAYLOAD_LENGTH];  //接收数据数组
+static basicRfCfg_t basicRfConfig;         //声明一个静态basicRfCfg_t结构体变量basicRfConfig
+
+//如果定义加密传输
+#ifdef SECURITY_CCM
+//密钥，加解密时使用
+static uint8 key[]= {
+    0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
+    0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,
+};
+#endif
+
+//本文件函数声明
+static void appLight();
+static void appSwitch();
+
+/***********************************************************************
+**函数名： appLight()
+**参数：   无
+**返回：   无
+**功能：   作为light设备，接收switch设备发送来的命令
+**作者：   www.frotech.com
+**时间：   2013年7月10日
+***********************************************************************/
+static void appLight()
+{
+    uint8 light_state=0;                       //用于判断灯的当前状态，初始为灭
+   
+
+    basicRfConfig.myAddr = LIGHT_ADDR;         //绑定light地址
+    if(basicRfInit(&basicRfConfig)==FAILED) {  //射频初始化
+      HAL_ASSERT(FALSE);                       //出错处理
+    }
+    basicRfReceiveOn();                        //打开接收功能
+                                               //进入死循环
+    while (TRUE) {
+        while(!basicRfPacketIsReady());        //做好接收数据准备
+
+        if(basicRfReceive(pRxData, APP_PAYLOAD_LENGTH, NULL)>0) { //如果接收到字节不为空
+
+            halLedSet(2);                  //开LED2
+            halMcuWaitMs(500);            //延时0.5秒钟
+            halLedClear(2);               //关LED2
+
+            if(pRxData[0] == LIGHT_TOGGLE_CMD) {  //如果接收到指令
+               
+                light_state++;
+                if(light_state%2==1){
+                   halLedSet(1);                  //开LED1 
+                }
+                if(light_state%2==0){
+                   halLedClear(1);               //关LED1
+                }
+
+            }
+        }
+    }
+}
+
+/***********************************************************************
+**函数名： appSwitch()
+**参数：   无
+**返回：   无
+**功能：   作为switch设备，按下S1键，发送指令给light设备
+**作者：   www.frotech.com
+**时间：   2013年7月10日
+***********************************************************************/
+static void appSwitch()
+{
+    pTxData[0] = LIGHT_TOGGLE_CMD;                  //向pTxData数组填装发送数据
+    basicRfConfig.myAddr = SWITCH_ADDR;               //绑定switch地址
+    if(basicRfInit(&basicRfConfig)==FAILED) {         //射频初始化
+      HAL_ASSERT(FALSE);                              //初始化失败处理
+    }
+    basicRfReceiveOff();                              //关闭接收模式，保持低功耗
+
+    while (TRUE) {                                    //进入死循环
+      if(halButtonPushed()==HAL_BUTTON_1){            //如果检测到S1键按下
+
+            halLedSet(2);                  //开LED2
+            halMcuWaitMs(500);            //延时0.5秒钟
+            halLedClear(2);               //关LED2
+
+            basicRfSendPacket(LIGHT_ADDR, pTxData, APP_PAYLOAD_LENGTH);//发送数据
+        }
+    }
+}
+/***********************************************************************
+**名称：  main()
+**参数：  无
+**返回：  无
+**功能：  函数，
+**作者：  www.frotech.com
+**时间：  2013年7月10日
+***********************************************************************/
+void main(void)
+{
+    uint8 appMode;
+    //配置basicRFConfig参数
+    basicRfConfig.panId = PAN_ID;
+    basicRfConfig.channel = RF_CHANNEL;
+    basicRfConfig.ackRequest = TRUE;
+    //是否加码传输
+#ifdef SECURITY_CCM
+    basicRfConfig.securityKey = key;
+#endif
+    halBoardInit();                //硬件初始化
+    if(halRfInit()==FAILED) {      //射频初始化
+      HAL_ASSERT(FALSE);
+    }
+      appSwitch();
+      //appLight();
+}
